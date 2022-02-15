@@ -65,6 +65,7 @@ namespace DragDropFromOutlookSample
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            // Activate the drop target
             groupBoxDropTarget.AllowDrop = true;
             groupBoxDropTarget.DragEnter += GroupBoxDropTarget_DragEnter;
             groupBoxDropTarget.DragDrop += GroupBoxDropTarget_DragDrop;
@@ -92,7 +93,8 @@ namespace DragDropFromOutlookSample
 
         private void GroupBoxDropTarget_DragDrop(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent("FileGroupDescriptor"))
+            // Check for Outlook data, which is presented as FileGroupDescriptorW
+            if (e.Data.GetDataPresent("FileGroupDescriptorW"))
             {
                 IntPtr fileGroupDescriptorWPointer = IntPtr.Zero;
                 try
@@ -126,6 +128,7 @@ namespace DragDropFromOutlookSample
                         fileDescriptorPointer = (IntPtr)((int)fileDescriptorPointer + Marshal.SizeOf(fileDescriptor));
                     }
 
+                    // Display the filenames
                     textBoxItemInfo.Text = String.Join(Environment.NewLine, fileNames);
 
                     if (checkBoxSaveItems.Checked)
@@ -145,16 +148,21 @@ namespace DragDropFromOutlookSample
 
             if (e.Data.GetDataPresent(DataFormats.Text))
             {
+                // Dump the text format of the dragged data
                 textBoxItemInfo.Text = String.Join(Environment.NewLine, e.Data.GetData(DataFormats.Text, true));
                 return;
             }
 
+            // If we get here, we didn't know what to do with the data
             textBoxItemInfo.Text = "Unsupported drop format";
         }
 
         private void GroupBoxDropTarget_DragEnter(object sender, DragEventArgs e)
         {
+            // Dump the available source formats
             textBoxItemInfo.Text = String.Join(Environment.NewLine, e.Data.GetFormats(false));
+
+            // If we can do something with the data, we set the mouse pointer effect
             if (e.Data.GetDataPresent("FileGroupDescriptorW"))
                 e.Effect = DragDropEffects.Copy;
             else
