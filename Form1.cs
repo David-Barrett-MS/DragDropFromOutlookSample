@@ -84,9 +84,9 @@ namespace DragDropFromOutlookSample
             formatetc.tymed = TYMED.TYMED_ISTREAM | TYMED.TYMED_ISTORAGE | TYMED.TYMED_HGLOBAL;
 
             STGMEDIUM medium = new STGMEDIUM();
-            ((System.Runtime.InteropServices.ComTypes.IDataObject)dataObject).GetData(ref formatetc, out medium);
+            dataObject.GetData(ref formatetc, out medium);
 
-            // How we retrieve the data depends upon the returned store type
+            // How we retrieve the data depends upon the returned data type
             // This is not implemented as it is currently beyond the scope of this sample
             // See https://docs.microsoft.com/en-us/windows/win32/com/data-transfer
         }
@@ -96,7 +96,7 @@ namespace DragDropFromOutlookSample
             // Check for Outlook data, which is presented as FileGroupDescriptorW
             if (e.Data.GetDataPresent("FileGroupDescriptorW"))
             {
-                IntPtr fileGroupDescriptorWPointer = IntPtr.Zero;
+                GCHandle? gch = null;
                 try
                 {
                     // Get FileGroupDescriptorW as a MemoryStream
@@ -105,11 +105,9 @@ namespace DragDropFromOutlookSample
                     fileGroupDescriptorStream.Read(fileGroupDescriptorBytes, 0, fileGroupDescriptorBytes.Length);
                     fileGroupDescriptorStream.Close();
 
-                    // Copy the file group descriptor into unmanaged memory
-                    fileGroupDescriptorWPointer = Marshal.AllocHGlobal(fileGroupDescriptorBytes.Length);
-                    Marshal.Copy(fileGroupDescriptorBytes, 0, fileGroupDescriptorWPointer, fileGroupDescriptorBytes.Length);
-
-                    // Marshal the unmanaged memory to FILEGROUPDESCRIPTORW struct
+                    // Marshal the byte array to FILEGROUPDESCRIPTORW struct
+                    gch = GCHandle.Alloc(fileGroupDescriptorBytes, GCHandleType.Pinned);
+                    IntPtr fileGroupDescriptorWPointer = ((GCHandle)gch).AddrOfPinnedObject();
                     object fileGroupDescriptorObject = Marshal.PtrToStructure(fileGroupDescriptorWPointer, typeof(FILEGROUPDESCRIPTORW));
                     FILEGROUPDESCRIPTORW fileGroupDescriptor = (FILEGROUPDESCRIPTORW)fileGroupDescriptorObject;
 
@@ -141,8 +139,8 @@ namespace DragDropFromOutlookSample
                 }
                 finally
                 {
-                    // Free unmanaged memory pointer
-                    Marshal.FreeHGlobal(fileGroupDescriptorWPointer);
+                    // Free our GCHandle
+                    gch?.Free();
                 }
             }
 
